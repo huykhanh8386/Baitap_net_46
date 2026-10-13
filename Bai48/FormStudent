@@ -1,0 +1,333 @@
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Drawing;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace Bai48
+{
+    public class FormStudent : Form
+    {
+        private FormMain mainForm;
+
+        private BindingList<Student> students =
+            new BindingList<Student>();
+
+        private BindingSource source =
+            new BindingSource();
+
+        private DataGridView dgv =
+            new DataGridView();
+
+        private Button btnLoad =
+            new Button();
+
+        private ProgressBar progressBar =
+            new ProgressBar();
+
+        private Label lblProgress =
+            new Label();
+
+        private Label lblTitle =
+            new Label();
+
+        private Label lblCount =
+            new Label();
+
+        private bool isLoading = false;
+
+        private CancellationTokenSource cancelSource;
+
+        public FormStudent(FormMain parent)
+        {
+            mainForm = parent;
+
+            Text = "QUẢN LÝ SINH VIÊN - ASYNC";
+            Size = new Size(1000, 650);
+            MinimumSize = new Size(700, 450);
+
+            StartPosition = FormStartPosition.CenterScreen;
+
+            CreateUI();
+        }
+
+        private void CreateUI()
+        {
+            Font = new Font("Segoe UI", 10);
+
+            TableLayoutPanel layout =
+                new TableLayoutPanel();
+
+            layout.Dock = DockStyle.Fill;
+            layout.ColumnCount = 1;
+            layout.RowCount = 3;
+            layout.Padding = new Padding(15);
+
+            layout.RowStyles.Add(
+                new RowStyle(SizeType.Absolute, 60));
+
+            layout.RowStyles.Add(
+                new RowStyle(SizeType.Absolute, 125));
+
+            layout.RowStyles.Add(
+                new RowStyle(SizeType.Percent, 100));
+
+            Controls.Add(layout);
+
+            lblTitle.Text =
+                "NẠP DỮ LIỆU SINH VIÊN BẤT ĐỒNG BỘ";
+
+            lblTitle.Font =
+                new Font("Segoe UI", 17, FontStyle.Bold);
+
+            lblTitle.ForeColor = Color.DarkBlue;
+            lblTitle.TextAlign =
+                ContentAlignment.MiddleCenter;
+
+            lblTitle.Dock = DockStyle.Fill;
+
+            layout.Controls.Add(lblTitle, 0, 0);
+
+            Panel panelProgress = new Panel();
+            panelProgress.Dock = DockStyle.Fill;
+
+            layout.Controls.Add(panelProgress, 0, 1);
+
+            btnLoad.Text = "NẠP DỮ LIỆU";
+            btnLoad.Location = new Point(10, 10);
+            btnLoad.Size = new Size(170, 40);
+            btnLoad.BackColor = Color.LightBlue;
+
+            btnLoad.UseVisualStyleBackColor = false;
+
+            panelProgress.Controls.Add(btnLoad);
+
+            progressBar.Location = new Point(200, 15);
+            progressBar.Size = new Size(480, 30);
+            progressBar.Minimum = 0;
+            progressBar.Maximum = 100;
+            progressBar.Value = 0;
+
+            progressBar.Anchor =
+                AnchorStyles.Top |
+                AnchorStyles.Left |
+                AnchorStyles.Right;
+
+            panelProgress.Controls.Add(progressBar);
+
+            lblProgress.Text = "0%";
+            lblProgress.Font = new Font(
+                "Segoe UI", 14, FontStyle.Bold);
+
+            lblProgress.Location = new Point(700, 15);
+            lblProgress.AutoSize = true;
+
+            panelProgress.Controls.Add(lblProgress);
+
+            lblCount.Text = "Tổng số sinh viên: 0";
+            lblCount.Location = new Point(10, 75);
+            lblCount.AutoSize = true;
+            lblCount.Font = new Font(
+                "Segoe UI", 11, FontStyle.Bold);
+
+            panelProgress.Controls.Add(lblCount);
+
+            dgv.Dock = DockStyle.Fill;
+            dgv.ReadOnly = true;
+            dgv.MultiSelect = false;
+            dgv.AllowUserToAddRows = false;
+            dgv.AllowUserToDeleteRows = false;
+
+            dgv.SelectionMode =
+                DataGridViewSelectionMode.FullRowSelect;
+
+            dgv.AutoSizeColumnsMode =
+                DataGridViewAutoSizeColumnsMode.Fill;
+
+            dgv.BackgroundColor = Color.White;
+            dgv.RowHeadersVisible = false;
+
+            source.DataSource = students;
+            dgv.DataSource = source;
+
+            layout.Controls.Add(dgv, 0, 2);
+
+            btnLoad.Click += BtnLoad_Click;
+
+            FormClosing += FormStudent_FormClosing;
+        }
+
+        private async void BtnLoad_Click(
+            object sender, EventArgs e)
+        {
+            if (isLoading)
+                return;
+
+            isLoading = true;
+            btnLoad.Enabled = false;
+
+            progressBar.Value = 0;
+            lblProgress.Text = "0%";
+            lblCount.Text = "Đang nạp dữ liệu...";
+
+            cancelSource = new CancellationTokenSource();
+
+            try
+            {
+                mainForm.SetStatus(
+                    "Bắt đầu nạp danh sách sinh viên");
+
+                IProgress<int> progress =
+                    new Progress<int>(percent =>
+                    {
+                        if (IsDisposed || Disposing)
+                            return;
+
+                        progressBar.Value = percent;
+                        lblProgress.Text = percent + "%";
+
+                        mainForm.SetStatus(
+                            "Tiến trình nạp dữ liệu: " +
+                            percent + "%");
+                    });
+
+                List<Student> result =
+                    await LoadStudentsAsync(
+                        progress,
+                        cancelSource.Token);
+                students.RaiseListChangedEvents = false;
+
+                try
+                {
+                    students.Clear();
+
+                    foreach (Student student in result)
+                    {
+                        students.Add(student);
+                    }
+                }
+                finally
+                {
+                    students.RaiseListChangedEvents = true;
+                    source.ResetBindings(false);
+                }
+
+                progressBar.Value = 100;
+                lblProgress.Text = "100%";
+
+                lblCount.Text =
+                    "Tổng số sinh viên: " +
+                    students.Count;
+
+                mainForm.SetStatus(
+                    "Hoàn tất nạp " +
+                    students.Count + " sinh viên");
+
+                MessageBox.Show(
+                    "Nạp dữ liệu thành công!\n" +
+                    "Tổng số: " + students.Count +
+                    " sinh viên.",
+                    "Thông báo",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (OperationCanceledException)
+            {
+                mainForm.SetStatus(
+                    "Tác vụ nạp dữ liệu đã bị hủy");
+            }
+            catch (Exception ex)
+            {
+                mainForm.SetStatus(
+                    "Có lỗi trong quá trình nạp dữ liệu");
+
+                MessageBox.Show(
+                    "Lỗi: " + ex.Message,
+                    "Lỗi",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (cancelSource != null)
+                {
+                    cancelSource.Dispose();
+                    cancelSource = null;
+                }
+
+                isLoading = false;
+
+                if (!IsDisposed && !Disposing)
+                {
+                    btnLoad.Enabled = true;
+                }
+            }
+        }
+
+        private async Task<List<Student>>
+            LoadStudentsAsync(
+                IProgress<int> progress,
+                CancellationToken token)
+        {
+            return await Task.Run(async () =>
+            {
+                List<Student> result =
+                    new List<Student>();
+
+                int total = 1000;
+
+                for (int i = 1; i <= total; i++)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    await Task.Delay(5, token);
+
+                    Student student = new Student();
+
+                    student.StudentId =
+                        "SV" + i.ToString("0000");
+
+                    student.FullName =
+                        "Sinh viên " + i;
+
+                    student.Age =
+                        18 + (i % 5);
+
+                    student.Gender =
+                        i % 2 == 0 ? "Nam" : "Nữ";
+
+                    result.Add(student);
+
+                    if (i % 10 == 0 || i == total)
+                    {
+                        int percent =
+                            i * 100 / total;
+
+                        progress.Report(percent);
+                    }
+                }
+
+                return result;
+            }, token);
+        }
+
+        private void FormStudent_FormClosing(
+            object sender, FormClosingEventArgs e)
+        {
+            if (isLoading && cancelSource != null)
+            {
+              
+                e.Cancel = true;
+
+                cancelSource.Cancel();
+
+                mainForm.SetStatus(
+                    "Đang hủy tác vụ nạp dữ liệu...");
+            }
+        }
+    }
+}
+
