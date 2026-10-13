@@ -1,0 +1,319 @@
+
+using System;
+using System.ComponentModel;
+using System.Drawing;
+using System.Windows.Forms;
+
+namespace Bai47
+{
+    public class Student
+    {
+        public string StudentId { get; set; }
+        public string FullName { get; set; }
+        public int Age { get; set; }
+        public string Gender { get; set; }
+    }
+
+    public class FormStudent : Form
+    {
+        private FormMain main;
+
+        private BindingList<Student> list =
+            new BindingList<Student>();
+
+        private BindingSource source =
+            new BindingSource();
+
+        private TextBox txtId = new TextBox();
+        private TextBox txtName = new TextBox();
+        private TextBox txtAge = new TextBox();
+        private ComboBox cboGender = new ComboBox();
+
+        private DataGridView dgv = new DataGridView();
+
+        private Button btnAdd = new Button();
+        private Button btnDelete = new Button();
+        private Button btnRefresh = new Button();
+
+        public FormStudent(FormMain parent)
+        {
+            main = parent;
+
+            Text = "Quản lý Sinh viên";
+            Size = new Size(820, 560);
+            MinimumSize = new Size(650, 450);
+
+            CreateUI();
+            CreateContextMenu();
+            LoadSampleData();
+        }
+
+        private void AddLabel(string text, int x, int y)
+        {
+            Label label = new Label();
+            label.Text = text;
+            label.Location = new Point(x, y);
+            label.AutoSize = true;
+            Controls.Add(label);
+        }
+
+        private void CreateUI()
+        {
+            Font = new Font("Segoe UI", 10);
+
+            Label title = new Label();
+            title.Text = "QUẢN LÝ SINH VIÊN";
+            title.Font = new Font(
+                "Segoe UI", 16, FontStyle.Bold);
+            title.Dock = DockStyle.Top;
+            title.Height = 50;
+            title.TextAlign = ContentAlignment.MiddleCenter;
+            Controls.Add(title);
+
+            AddLabel("Mã sinh viên:", 20, 75);
+            txtId.Location = new Point(140, 72);
+            txtId.Width = 180;
+            Controls.Add(txtId);
+
+            AddLabel("Họ tên:", 350, 75);
+            txtName.Location = new Point(440, 72);
+            txtName.Width = 280;
+            Controls.Add(txtName);
+
+            AddLabel("Tuổi:", 20, 125);
+            txtAge.Location = new Point(140, 122);
+            txtAge.Width = 180;
+            Controls.Add(txtAge);
+
+            AddLabel("Giới tính:", 350, 125);
+            cboGender.Location = new Point(440, 122);
+            cboGender.Width = 180;
+            cboGender.DropDownStyle =
+                ComboBoxStyle.DropDownList;
+            cboGender.Items.AddRange(
+                new object[] { "Nam", "Nữ" });
+            cboGender.SelectedIndex = 0;
+            Controls.Add(cboGender);
+
+            btnAdd.Text = "Thêm";
+            btnAdd.Location = new Point(140, 180);
+            btnAdd.Size = new Size(120, 35);
+
+            btnDelete.Text = "Xóa";
+            btnDelete.Location = new Point(280, 180);
+            btnDelete.Size = new Size(120, 35);
+
+            btnRefresh.Text = "Làm mới";
+            btnRefresh.Location = new Point(420, 180);
+            btnRefresh.Size = new Size(120, 35);
+
+            Controls.Add(btnAdd);
+            Controls.Add(btnDelete);
+            Controls.Add(btnRefresh);
+
+            dgv.Location = new Point(20, 235);
+            dgv.Size = new Size(760, 270);
+
+            dgv.Anchor = AnchorStyles.Top |
+                         AnchorStyles.Bottom |
+                         AnchorStyles.Left |
+                         AnchorStyles.Right;
+
+            dgv.ReadOnly = true;
+            dgv.MultiSelect = false;
+            dgv.AllowUserToAddRows = false;
+            dgv.AllowUserToDeleteRows = false;
+            dgv.SelectionMode =
+                DataGridViewSelectionMode.FullRowSelect;
+            dgv.AutoSizeColumnsMode =
+                DataGridViewAutoSizeColumnsMode.Fill;
+
+            source.DataSource = list;
+            dgv.DataSource = source;
+
+            Controls.Add(dgv);
+
+            btnAdd.Click += BtnAdd_Click;
+            btnDelete.Click += BtnDelete_Click;
+
+            btnRefresh.Click += delegate
+            {
+                RefreshList();
+            };
+        }
+
+        private void LoadSampleData()
+        {
+            list.Add(new Student
+            {
+                StudentId = "SV001",
+                FullName = "Nguyễn Văn An",
+                Age = 20,
+                Gender = "Nam"
+            });
+
+            list.Add(new Student
+            {
+                StudentId = "SV002",
+                FullName = "Trần Thị Bình",
+                Age = 21,
+                Gender = "Nữ"
+            });
+
+            list.Add(new Student
+            {
+                StudentId = "SV003",
+                FullName = "Lê Văn Cường",
+                Age = 19,
+                Gender = "Nam"
+            });
+        }
+
+        private void BtnAdd_Click(
+            object sender, EventArgs e)
+        {
+            string id = txtId.Text.Trim();
+            string name = txtName.Text.Trim();
+
+            int age;
+
+            if (id == "" || name == "")
+            {
+                MessageBox.Show(
+                    "Vui lòng nhập mã và họ tên!");
+                return;
+            }
+
+            if (!int.TryParse(txtAge.Text, out age)
+                || age < 1 || age > 120)
+            {
+                MessageBox.Show("Tuổi không hợp lệ!");
+                return;
+            }
+
+            foreach (Student s in list)
+            {
+                if (string.Equals(
+                    s.StudentId, id,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageBox.Show(
+                        "Mã sinh viên đã tồn tại!");
+                    return;
+                }
+            }
+
+            Student student = new Student();
+            student.StudentId = id;
+            student.FullName = name;
+            student.Age = age;
+            student.Gender = cboGender.Text;
+
+            list.Add(student);
+            source.Position = list.Count - 1;
+
+            txtId.Clear();
+            txtName.Clear();
+            txtAge.Clear();
+            cboGender.SelectedIndex = 0;
+
+            main.SetStatus(
+                "Thêm sinh viên thành công: " + name);
+
+            MessageBox.Show("Thêm thành công!");
+        }
+
+        private void BtnDelete_Click(
+            object sender, EventArgs e)
+        {
+            Student s = source.Current as Student;
+
+            if (s == null)
+            {
+                MessageBox.Show(
+                    "Chưa có sinh viên được chọn!");
+                return;
+            }
+
+            DialogResult result = MessageBox.Show(
+                "Bạn muốn xóa " + s.FullName + "?",
+                "Xác nhận",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result != DialogResult.Yes)
+                return;
+
+            string name = s.FullName;
+            source.RemoveCurrent();
+
+            main.SetStatus(
+                "Đã xóa sinh viên: " + name);
+        }
+
+        private void RefreshList()
+        {
+            source.ResetBindings(false);
+
+            main.SetStatus(
+                "Đã làm mới danh sách sinh viên");
+        }
+
+        private void ViewDetail()
+        {
+            Student s = source.Current as Student;
+
+            if (s == null)
+            {
+                MessageBox.Show("Chưa chọn sinh viên!");
+                return;
+            }
+
+            MessageBox.Show(
+                "Mã SV: " + s.StudentId +
+                "\nHọ tên: " + s.FullName +
+                "\nTuổi: " + s.Age +
+                "\nGiới tính: " + s.Gender,
+                "Chi tiết sinh viên");
+
+            main.SetStatus(
+                "Đã xem sinh viên: " + s.StudentId);
+        }
+
+        private void CreateContextMenu()
+        {
+            ContextMenuStrip context =
+                new ContextMenuStrip();
+
+            context.Items.Add(
+                "Xóa dòng", null,
+                delegate { BtnDelete_Click(null, EventArgs.Empty); });
+
+            context.Items.Add(
+                "Làm mới dữ liệu", null,
+                delegate { RefreshList(); });
+
+            context.Items.Add(
+                "Xem chi tiết", null,
+                delegate { ViewDetail(); });
+
+            dgv.ContextMenuStrip = context;
+
+            dgv.CellMouseDown += delegate (
+                object sender,
+                DataGridViewCellMouseEventArgs e)
+            {
+                if (e.Button == MouseButtons.Right &&
+                    e.RowIndex >= 0)
+                {
+                    dgv.ClearSelection();
+
+                    dgv.CurrentCell =
+                        dgv.Rows[e.RowIndex].Cells[0];
+
+                    dgv.Rows[e.RowIndex].Selected = true;
+                }
+            };
+        }
+    }
+}
