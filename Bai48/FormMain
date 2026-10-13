@@ -1,0 +1,220 @@
+
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+
+namespace Bai48
+{
+    public class FormMain : Form
+    {
+        private MenuStrip menu = new MenuStrip();
+        private ToolStrip toolbar = new ToolStrip();
+        private StatusStrip status = new StatusStrip();
+
+        private ToolStripStatusLabel lblUser =
+            new ToolStripStatusLabel();
+
+        private ToolStripStatusLabel lblStatus =
+            new ToolStripStatusLabel();
+
+        private ToolStripStatusLabel lblTime =
+            new ToolStripStatusLabel();
+
+        private Timer timer = new Timer();
+
+        public FormMain()
+        {
+            Text = "BÀI 4.8 - ASYNC/AWAIT & PROGRESSBAR";
+            WindowState = FormWindowState.Maximized;
+            IsMdiContainer = true;
+
+            CreateMenu();
+            CreateToolbar();
+            CreateStatusBar();
+
+            Shown += delegate
+            {
+                OpenStudentForm();
+            };
+        }
+
+        private void CreateMenu()
+        {
+            ToolStripMenuItem menuSystem =
+                new ToolStripMenuItem("Hệ thống");
+
+            ToolStripMenuItem menuExit =
+                new ToolStripMenuItem("Thoát");
+
+            menuExit.Click += delegate
+            {
+                Close();
+            };
+
+            menuSystem.DropDownItems.Add(menuExit);
+
+            ToolStripMenuItem menuCategory =
+                new ToolStripMenuItem("Danh mục");
+
+            ToolStripMenuItem menuStudent =
+                new ToolStripMenuItem("Nạp dữ liệu Sinh viên");
+
+            menuStudent.Click += delegate
+            {
+                OpenStudentForm();
+            };
+
+            menuCategory.DropDownItems.Add(menuStudent);
+
+            ToolStripMenuItem menuWindow =
+                new ToolStripMenuItem("Cửa sổ");
+
+            ToolStripMenuItem cascade =
+                new ToolStripMenuItem("Cascade");
+
+            ToolStripMenuItem horizontal =
+                new ToolStripMenuItem("Tile Horizontal");
+
+            ToolStripMenuItem vertical =
+                new ToolStripMenuItem("Tile Vertical");
+
+            cascade.Click += delegate
+            {
+                LayoutMdi(MdiLayout.Cascade);
+            };
+
+            horizontal.Click += delegate
+            {
+                LayoutMdi(MdiLayout.TileHorizontal);
+            };
+
+            vertical.Click += delegate
+            {
+                LayoutMdi(MdiLayout.TileVertical);
+            };
+
+            menuWindow.DropDownItems.Add(cascade);
+            menuWindow.DropDownItems.Add(horizontal);
+            menuWindow.DropDownItems.Add(vertical);
+
+            menu.Items.Add(menuSystem);
+            menu.Items.Add(menuCategory);
+            menu.Items.Add(menuWindow);
+
+            MainMenuStrip = menu;
+            Controls.Add(menu);
+        }
+        private void CreateToolbar()
+        {
+            ToolStripButton btnStudent =
+                new ToolStripButton("Quản lý Sinh viên");
+
+            btnStudent.Image =
+                SystemIcons.Information.ToBitmap();
+
+            btnStudent.DisplayStyle =
+                ToolStripItemDisplayStyle.ImageAndText;
+
+            btnStudent.Click += delegate
+            {
+                OpenStudentForm();
+            };
+
+            toolbar.Items.Add(btnStudent);
+            toolbar.Dock = DockStyle.Top;
+
+            Controls.Add(toolbar);
+
+            toolbar.Location = new Point(0, menu.Height);
+        }
+
+        private void CreateStatusBar()
+        {
+            lblUser.Text = "Người dùng: Admin";
+            lblStatus.Text = "Sẵn sàng";
+
+            lblStatus.Spring = true;
+            lblStatus.TextAlign =
+                ContentAlignment.MiddleLeft;
+
+            lblTime.Text =
+                DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+
+            status.Items.Add(lblUser);
+            status.Items.Add(lblStatus);
+            status.Items.Add(lblTime);
+
+            status.Dock = DockStyle.Bottom;
+            Controls.Add(status);
+
+            timer.Interval = 1000;
+
+            timer.Tick += delegate
+            {
+                lblTime.Text =
+                    DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+            };
+
+            timer.Start();
+        }
+
+
+        private void OpenStudentForm()
+        {
+            foreach (Form form in MdiChildren)
+            {
+                if (form is FormStudent)
+                {
+                    if (form.WindowState ==
+                        FormWindowState.Minimized)
+                    {
+                        form.WindowState =
+                            FormWindowState.Normal;
+                    }
+
+                    form.Activate();
+                    return;
+                }
+            }
+
+            FormStudent studentForm =
+                new FormStudent(this);
+
+            studentForm.MdiParent = this;
+            studentForm.Show();
+
+            SetStatus("Đã mở Form nạp dữ liệu");
+        }
+
+        
+
+        public void SetStatus(string message)
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            if (InvokeRequired)
+            {
+                if (IsHandleCreated)
+                {
+                    BeginInvoke(
+                        new Action<string>(SetStatus),
+                        message);
+                }
+
+                return;
+            }
+
+            lblStatus.Text = message;
+        }
+
+        protected override void OnFormClosed(
+            FormClosedEventArgs e)
+        {
+            timer.Stop();
+            timer.Dispose();
+
+            base.OnFormClosed(e);
+        }
+    }
+}
