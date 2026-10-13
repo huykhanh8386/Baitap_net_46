@@ -1,0 +1,249 @@
+
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+
+namespace Bai47
+{
+    public class FormMain : Form
+    {
+        private MenuStrip menu = new MenuStrip();
+        private ToolStrip toolbar = new ToolStrip();
+        private StatusStrip status = new StatusStrip();
+
+        private ToolStripStatusLabel lblUser =
+            new ToolStripStatusLabel();
+
+        private ToolStripStatusLabel lblMessage =
+            new ToolStripStatusLabel();
+
+        private ToolStripStatusLabel lblTime =
+            new ToolStripStatusLabel();
+
+        private Timer clock = new Timer();
+
+        public FormMain()
+        {
+            Text = "BÀI 4.7 - QUẢN LÝ ĐA CỬA SỔ MDI";
+            WindowState = FormWindowState.Maximized;
+            IsMdiContainer = true;
+
+            CreateMenu();
+            CreateToolbar();
+            CreateStatusBar();
+        }
+
+        private void CreateMenu()
+        {
+            ToolStripMenuItem heThong =
+                new ToolStripMenuItem("Hệ thống");
+
+            ToolStripMenuItem dangXuat =
+                new ToolStripMenuItem("Đăng xuất");
+
+            ToolStripMenuItem thoat =
+                new ToolStripMenuItem("Thoát");
+
+            dangXuat.Click += delegate
+            {
+                foreach (Form f in MdiChildren)
+                {
+                    f.Close();
+                }
+
+                lblUser.Text = "Người dùng: Chưa đăng nhập";
+                SetStatus("Đã đăng xuất (mô phỏng)");
+            };
+
+            thoat.Click += delegate
+            {
+                Close();
+            };
+
+            heThong.DropDownItems.Add(dangXuat);
+            heThong.DropDownItems.Add(thoat);
+
+            ToolStripMenuItem danhMuc =
+                new ToolStripMenuItem("Danh mục");
+
+            ToolStripMenuItem sinhVien =
+                new ToolStripMenuItem("Quản lý Sinh viên");
+
+            ToolStripMenuItem sanPham =
+                new ToolStripMenuItem("Quản lý Sản phẩm");
+
+            sinhVien.Click += delegate
+            {
+                OpenChild(new FormStudent(this));
+            };
+
+            sanPham.Click += delegate
+            {
+                OpenChild(new FormProduct(this));
+            };
+
+            danhMuc.DropDownItems.Add(sinhVien);
+            danhMuc.DropDownItems.Add(sanPham);
+
+            ToolStripMenuItem cuaSo =
+                new ToolStripMenuItem("Cửa sổ");
+
+            ToolStripMenuItem cascade =
+                new ToolStripMenuItem("Cascade");
+
+            ToolStripMenuItem ngang =
+                new ToolStripMenuItem("Tile Horizontal");
+
+            ToolStripMenuItem doc =
+                new ToolStripMenuItem("Tile Vertical");
+
+            cascade.Click += delegate
+            {
+                LayoutMdi(MdiLayout.Cascade);
+            };
+
+            ngang.Click += delegate
+            {
+                LayoutMdi(MdiLayout.TileHorizontal);
+            };
+
+            doc.Click += delegate
+            {
+                LayoutMdi(MdiLayout.TileVertical);
+            };
+
+            cuaSo.DropDownItems.Add(cascade);
+            cuaSo.DropDownItems.Add(ngang);
+            cuaSo.DropDownItems.Add(doc);
+
+            menu.Items.Add(heThong);
+            menu.Items.Add(danhMuc);
+            menu.Items.Add(cuaSo);
+
+            MainMenuStrip = menu;
+            Controls.Add(menu);
+        }
+
+        private void CreateToolbar()
+        {
+            ToolStripButton btnSinhVien =
+                new ToolStripButton("Sinh viên");
+
+            btnSinhVien.Image =
+                SystemIcons.Information.ToBitmap();
+
+            btnSinhVien.DisplayStyle =
+                ToolStripItemDisplayStyle.ImageAndText;
+
+            btnSinhVien.Click += delegate
+            {
+                OpenChild(new FormStudent(this));
+            };
+
+            ToolStripButton btnSanPham =
+                new ToolStripButton("Sản phẩm");
+
+            btnSanPham.Image =
+                SystemIcons.Application.ToBitmap();
+
+            btnSanPham.DisplayStyle =
+                ToolStripItemDisplayStyle.ImageAndText;
+
+            btnSanPham.Click += delegate
+            {
+                OpenChild(new FormProduct(this));
+            };
+
+            toolbar.Items.Add(btnSinhVien);
+            toolbar.Items.Add(btnSanPham);
+
+            toolbar.Dock = DockStyle.Top;
+            Controls.Add(toolbar);
+            toolbar.Location = new Point(0, menu.Height);
+        }
+
+        private void CreateStatusBar()
+        {
+            lblUser.Text = "Người dùng: Admin";
+            lblMessage.Text = "Hệ thống sẵn sàng";
+
+            lblMessage.Spring = true;
+            lblMessage.TextAlign =
+                ContentAlignment.MiddleLeft;
+
+            lblTime.Text =
+                DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+
+            status.Items.Add(lblUser);
+            status.Items.Add(lblMessage);
+            status.Items.Add(lblTime);
+
+            Controls.Add(status);
+
+            clock.Interval = 1000;
+
+            clock.Tick += delegate
+            {
+                lblTime.Text =
+                    DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+            };
+
+            clock.Start();
+        }
+
+        private void OpenChild(Form newForm)
+        {
+            foreach (Form f in MdiChildren)
+            {
+                if (f.GetType() == newForm.GetType())
+                {
+                    newForm.Dispose();
+
+                    if (f.WindowState ==
+                        FormWindowState.Minimized)
+                    {
+                        f.WindowState =
+                            FormWindowState.Normal;
+                    }
+
+                    f.Activate();
+
+                    SetStatus("Đã kích hoạt: " + f.Text);
+                    return;
+                }
+            }
+
+            newForm.MdiParent = this;
+            newForm.StartPosition =
+                FormStartPosition.Manual;
+            newForm.Location = new Point(30, 30);
+
+            newForm.Show();
+            newForm.Activate();
+
+            SetStatus("Đã mở: " + newForm.Text);
+        }
+
+        public void SetStatus(string message)
+        {
+            if (IsDisposed) return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action<string>(SetStatus),
+                    message);
+                return;
+            }
+
+            lblMessage.Text = message;
+        }
+
+        protected override void OnFormClosed(
+            FormClosedEventArgs e)
+        {
+            clock.Stop();
+            clock.Dispose();
+            base.OnFormClosed(e);
+        }
+    }
+}
